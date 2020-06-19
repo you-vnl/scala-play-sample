@@ -1,0 +1,41 @@
+@* このテンプレートの引数 *@
+@(users: Seq[(models.UserRepository, Option[models.CompanyRepository])])(implicit request: RequestHeader)
+
+@* テンプレートで利用可能なヘルパーをインポート *@
+@import helper._
+
+@* main.scala.htmlを呼び出す *@
+@main("ユーザ一覧") {
+
+    <div>
+        <a href="@routes.UserViewController.edit()" class="btn btn-success" role="button">新規作成</a>
+    </div>
+
+    <div class="col-6">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>名前</th>
+                    <th>会社名</th>
+                    <th>&nbsp;</th>
+                </tr>
+            </thead>
+            <tbody>
+                @* ユーザの一覧をループで出力 *@
+                @users.map { case (user, company) =>
+                    <tr>
+                        <td>@user.id</td>
+                        <td><a href="@routes.UserViewController.edit(Some(user.id))">@user.name</a></td>
+                        <td>@company.map(_.name)</td>
+                        <td>@helper.form(CSRF(routes.UserViewController.remove(user.id))){
+                            <input type="submit" value="削除" class="btn btn-danger btn-sm"/>
+                        }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+}
