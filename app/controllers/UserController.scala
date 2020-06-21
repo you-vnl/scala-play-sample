@@ -3,10 +3,9 @@ package controllers
 import javax.inject.Inject
 import play.api.libs.json._
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
-import scalikejdbc._
 import UserController._
-import play.api.libs.functional.syntax._
 import repository.UserRepository
+import play.api.libs.json.JsonConfiguration.Aux
 
 /**
  * ユーザのコントローラを提供します。
@@ -15,14 +14,12 @@ import repository.UserRepository
  */
 class UserController @Inject()(components: ControllerComponents) extends AbstractController(components) {
 
-  val u = UserRepository.syntax("u")
-
   /**
    * ユーザ一覧をDBから取得して返します。
    * ケースクラスに対応したWritesが定義されていないとコンパイルエラーになります。
    */
   def list: Action[AnyContent] = Action { implicit request =>
-    Ok(Json.obj("users" -> UserRepository.getUserList))
+    Ok(Json.toJson(UserRepository.getUserList).toString())
   }
 
   /**
@@ -66,32 +63,29 @@ class UserController @Inject()(components: ControllerComponents) extends Abstrac
  * UserControllerのコンパニオンオブジェクトを定義します。
  */
 object UserController {
-  implicit val usersWritesFormat: Writes[UserRepository] = (user: UserRepository) => {
-    Json.obj(
-      "id" -> user.id,
-      "name" -> user.name,
-      "companyId" -> user.companyId
-    )
-  }
 
-  // ユーザ情報を受取るためのケースクラス
+  /**
+   * JSON出力をスネークケースで行う設定を行います。
+   */
+  implicit val config: Aux[Json.MacroOptions] = JsonConfiguration(JsonNaming.SnakeCase)
+
+  /**
+   * JSONをUserFormに変換するためのReadsを定義します。
+   */
+  implicit val userFormReads: Reads[UserForm] = Json.reads[UserForm]
+
+  /**
+   * UserRepositoryをJSONに変換するためのWritesを定義します。
+   */
+  implicit val userWrites: OWrites[UserRepository] = Json.writes[UserRepository]
+
+  /**
+   * ユーザ情報を受取るためのケースクラス
+   */
   case class UserForm(id: Option[Long], name: String, companyId: Option[Int])
 
   /**
-   * JSONをUserFormに変換するためのReadsを定義
-   *
-   * play.api.libs.json パッケージは、JsPath の別名として ダブルアンダースコア を定義している
-   * 以下のようにマクロを使ってシンプルに記述することも可能
-   * e.g. implicit val userFormReads  = Json.reads[UserForm]
-   * リーダとライタが必要な場合は下記
-   * e.g. implicit val userFormFormat = Json.format[UserForm]
-   *
+   * 処理成功時に返すJSONオブジェクトを定義します。
    */
-  implicit val userFormReads: Reads[UserForm] = (
-    (__ \ "id").readNullable[Long] and
-      (__ \ "name").read[String] and
-      (__ \ "companyId").readNullable[Int]
-    ) (UserForm)
-
   val successJson: JsObject = Json.obj("result" -> "success")
 }

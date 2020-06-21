@@ -131,7 +131,7 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
   /**
    * ユーザの作成を行います。
    *
-   * @param name ユーザ名
+   * @param name      ユーザ名
    * @param companyId 会社ID
    */
   def createUser(name: String, companyId: Int): Unit = {
@@ -144,8 +144,8 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
   /**
    * ユーザの登録を行います。
    *
-   * @param id ユーザID
-   * @param name ユーザ名
+   * @param id        ユーザID
+   * @param name      ユーザ名
    * @param companyId 会社ID
    */
   def saveUser(id: Long, name: String, companyId: Option[Int]): Unit = {
