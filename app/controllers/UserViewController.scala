@@ -5,8 +5,8 @@ import play.api.data._
 import play.api.data.Forms._
 import javax.inject.Inject
 import scalikejdbc._
-import models._
 import UserViewController._
+import repository.{CompanyRepository, UserRepository}
 
 class UserViewController @Inject()(components: MessagesControllerComponents)
   extends MessagesAbstractController(components) {

@@ -1,4 +1,5 @@
-@(userForm: Form[controllers.UserViewController.UserForm], companies: Seq[models.CompanyRepository])(implicit request: MessagesRequestHeader)
+@import repository.CompanyRepository
+@(userForm: Form[controllers.UserViewController.UserForm], companies: Seq[CompanyRepository])(implicit request: MessagesRequestHeader)
 
 @import helper._
 

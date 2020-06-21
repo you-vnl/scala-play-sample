@@ -9,6 +9,8 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.13.2"
 val circeVersion = "0.13.0"
+scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Xlint")
+
 
 libraryDependencies ++= Seq(
   "com.google.inject" % "guice" % "4.2.3",

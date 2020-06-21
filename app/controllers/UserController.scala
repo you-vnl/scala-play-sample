@@ -1,12 +1,12 @@
 package controllers
 
 import javax.inject.Inject
-import models.UserRepository
 import play.api.libs.json._
 import play.api.mvc.{AbstractController, Action, AnyContent, ControllerComponents}
 import scalikejdbc._
 import UserController._
 import play.api.libs.functional.syntax._
+import repository.UserRepository
 
 /**
  * ユーザのコントローラを提供します。
@@ -19,30 +19,21 @@ class UserController @Inject()(components: ControllerComponents) extends Abstrac
 
   /**
    * ユーザ一覧をDBから取得して返します。
+   * ケースクラスに対応したWritesが定義されていないとコンパイルエラーになります。
    */
   def list: Action[AnyContent] = Action { implicit request =>
-    DB.readOnly { implicit session =>
-      // ユーザのリストを取得
-      val users: Seq[UserRepository] = withSQL {
-        select.from(UserRepository as u).orderBy(u.id.asc)
-      }.map(UserRepository(u.resultName)).list.apply()
-      // ユーザの一覧をJSONで返す ケースクラスに対応したWritesが定義されていないとコンパイルエラーになる
-      Ok(Json.obj("users" -> users))
-    }
+    Ok(Json.obj("users" -> UserRepository.getUserList))
   }
 
   /**
    * ユーザ登録をリクエストパラメータから行います。
    * validateメソッドでJSONをケースクラスに変換でき、変換に失敗した場合の処理をrecoverTotalメソッドで行います。
    * OKの場合はユーザを登録し、NGの場合はバリデーションエラーを返します。
-   *
    */
   def create: Action[JsValue] = Action(parse.json) { implicit request =>
     request.body.validate[UserForm].map { form =>
-      DB.localTx { implicit session =>
-        UserRepository.create(form.name, form.companyId)
-        Ok(Json.obj("result" -> "success"))
-      }
+      UserRepository.createUser(form.name, form.companyId.get)
+      Ok(successJson)
     }.recoverTotal { e =>
       BadRequest(Json.obj(
         "result" -> "failure",
@@ -55,12 +46,8 @@ class UserController @Inject()(components: ControllerComponents) extends Abstrac
    */
   def update: Action[JsValue] = Action(parse.json) { implicit request =>
     request.body.validate[UserForm].map { form =>
-      DB.localTx {implicit session =>
-        UserRepository.find(form.id.get).foreach { user =>
-          UserRepository.save(user.copy(name = form.name, companyId = form.companyId))
-        }
-        Ok(Json.obj("result" -> "success"))
-      }
+      UserRepository.saveUser(id = form.id.get, form.name, form.companyId)
+      Ok(successJson)
     }.recoverTotal { e =>
       BadRequest(Json.obj("result" -> "failure", "error" -> JsError.toJson(e)))
     }
@@ -70,14 +57,9 @@ class UserController @Inject()(components: ControllerComponents) extends Abstrac
    * ユーザ削除を行います。
    */
   def remove(id: Long): Action[AnyContent] = Action { implicit request =>
-    DB.localTx { implicit session =>
-      UserRepository.find(id).foreach { user =>
-        UserRepository.destroy(user)
-      }
-      Ok(Json.obj("result" -> "success"))
-    }
+    UserRepository.removeUser(id)
+    Ok(successJson)
   }
-
 }
 
 /**
@@ -110,4 +92,6 @@ object UserController {
       (__ \ "name").read[String] and
       (__ \ "companyId").readNullable[Int]
     ) (UserForm)
+
+  val successJson: JsObject = Json.obj("result" -> "success")
 }

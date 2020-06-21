@@ -1,11 +1,11 @@
-package models
+package repository
 
 import scalikejdbc._
 
 case class UserRepository(
-  id: Long,
-  name: String,
-  companyId: Option[Int] = None) {
+                           id: Long,
+                           name: String,
+                           companyId: Option[Int] = None) {
 
   def save()(implicit session: DBSession = UserRepository.autoSession): UserRepository = UserRepository.save(this)(session)
 
@@ -23,6 +23,7 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
   override val columns = Seq("ID", "NAME", "COMPANY_ID")
 
   def apply(u: SyntaxProvider[UserRepository])(rs: WrappedResultSet): UserRepository = apply(u.resultName)(rs)
+
   def apply(u: ResultName[UserRepository])(rs: WrappedResultSet): UserRepository = new UserRepository(
     id = rs.get(u.id),
     name = rs.get(u.name),
@@ -66,8 +67,8 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
   }
 
   def create(
-    name: String,
-    companyId: Option[Int] = None)(implicit session: DBSession = autoSession): UserRepository = {
+              name: String,
+              companyId: Option[Int] = None)(implicit session: DBSession = autoSession): UserRepository = {
     val generatedKey = withSQL {
       insert.into(UserRepository).namedValues(
         column.name -> name,
@@ -86,7 +87,8 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
       Seq(
         Symbol("name") -> entity.name,
         Symbol("companyId") -> entity.companyId))
-    SQL("""insert into USERS(
+    SQL(
+      """insert into USERS(
       NAME,
       COMPANY_ID
     ) values (
@@ -107,7 +109,64 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
   }
 
   def destroy(entity: UserRepository)(implicit session: DBSession = autoSession): Int = {
-    withSQL { delete.from(UserRepository).where.eq(column.id, entity.id) }.update.apply()
+    withSQL {
+      delete.from(UserRepository).where.eq(column.id, entity.id)
+    }.update.apply()
+  }
+
+  /**
+   * ユーザリストをDBから取得します。
+   *
+   * @return ユーザリスト
+   */
+  def getUserList: Seq[UserRepository] = {
+    DB.readOnly { implicit session =>
+      withSQL {
+        select.from(UserRepository as u).orderBy(u.id.asc)
+      }.map(UserRepository(u.resultName))
+        .list.apply()
+    }
+  }
+
+  /**
+   * ユーザの作成を行います。
+   *
+   * @param name ユーザ名
+   * @param companyId 会社ID
+   */
+  def createUser(name: String, companyId: Int): Unit = {
+    DB.localTx { implicit session =>
+      UserRepository.create(name, Option(companyId))
+    }
+  }
+
+
+  /**
+   * ユーザの登録を行います。
+   *
+   * @param id ユーザID
+   * @param name ユーザ名
+   * @param companyId 会社ID
+   */
+  def saveUser(id: Long, name: String, companyId: Option[Int]): Unit = {
+    DB.localTx { implicit session =>
+      UserRepository.find(id).foreach { user =>
+        UserRepository.save(user.copy(name = name, companyId = companyId))
+      }
+    }
+  }
+
+  /**
+   * ユーザの削除を行います。
+   *
+   * @param id ユーザID
+   */
+  def removeUser(id: Long): Unit = {
+    DB.localTx { implicit session =>
+      UserRepository.find(id).foreach { user =>
+        UserRepository.destroy(user)
+      }
+    }
   }
 
 }

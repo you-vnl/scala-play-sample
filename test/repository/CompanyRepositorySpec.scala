@@ -1,6 +1,7 @@
-package models
+package repository
 
 import org.scalatest._
+import repository.CompanyRepository
 import scalikejdbc.scalatest.AutoRollback
 import scalikejdbc._
 

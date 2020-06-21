@@ -1,5 +1,7 @@
 @* このテンプレートの引数 *@
-@(users: Seq[(models.UserRepository, Option[models.CompanyRepository])])(implicit request: RequestHeader)
+@import repository.UserRepository
+@import repository.CompanyRepository
+@(users: Seq[(UserRepository, Option[CompanyRepository])])(implicit request: RequestHeader)
 
 @* テンプレートで利用可能なヘルパーをインポート *@
 @import helper._
