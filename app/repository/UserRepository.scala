@@ -148,10 +148,11 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
    * @param name      ユーザ名
    * @param companyId 会社ID
    */
-  def saveUser(id: Long, name: String, companyId: Option[Int]): Unit = {
+  def saveUser(id: Long, name: String, companyId: Option[Int]): Option[UserRepository] = {
     DB.localTx { implicit session =>
-      UserRepository.find(id).foreach { user =>
-        UserRepository.save(user.copy(name = name, companyId = companyId))
+      UserRepository.find(id) match {
+        case Some(user) => Option(UserRepository.save(user.copy(name = name, companyId = companyId)))
+        case None => None
       }
     }
   }
@@ -161,10 +162,11 @@ object UserRepository extends SQLSyntaxSupport[UserRepository] {
    *
    * @param id ユーザID
    */
-  def removeUser(id: Long): Unit = {
+  def removeUser(id: Long): Option[Int] = {
     DB.localTx { implicit session =>
-      UserRepository.find(id).foreach { user =>
-        UserRepository.destroy(user)
+      UserRepository.find(id) match {
+        case Some(user) => Option(UserRepository.destroy(user))
+        case None => None
       }
     }
   }

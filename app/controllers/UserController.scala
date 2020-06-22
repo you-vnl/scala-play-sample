@@ -8,7 +8,7 @@ import repository.UserRepository
 import play.api.libs.json.JsonConfiguration.Aux
 
 /**
- * ユーザのコントローラを提供します。
+ * ユーザのコントローラを定義します。
  *
  * @param components コントローラに対するコンポーネント
  */
@@ -32,21 +32,23 @@ class UserController @Inject()(components: ControllerComponents) extends Abstrac
       UserRepository.createUser(form.name, form.companyId.get)
       Ok(successJson)
     }.recoverTotal { e =>
-      BadRequest(Json.obj(
-        "result" -> "failure",
-        "error" -> JsError.toJson(e)))
+      BadRequest(createErrorJson(JsError.toJson(e)))
     }
   }
 
   /**
    * ユーザ更新を行います。
+   * JSONボディパーサーを利用すると、request.body の値が直接JsValueとして扱えるようになります。
+   * validateで暗黙の Reads[(String, Long)] に従って、入力された JSON のバリデーションと変換を明示的に行います。
    */
   def update: Action[JsValue] = Action(parse.json) { implicit request =>
     request.body.validate[UserForm].map { form =>
-      UserRepository.saveUser(id = form.id.get, form.name, form.companyId)
-      Ok(successJson)
+      UserRepository.saveUser(id = form.id.get, form.name, form.companyId) match { //要バリデーション
+        case Some(_) => Ok(successJson)
+        case None => BadRequest(createErrorJson(Json.obj("error" -> "ID not Found")))
+      }
     }.recoverTotal { e =>
-      BadRequest(Json.obj("result" -> "failure", "error" -> JsError.toJson(e)))
+      BadRequest(createErrorJson(JsError.toJson(e)))
     }
   }
 
@@ -54,8 +56,10 @@ class UserController @Inject()(components: ControllerComponents) extends Abstrac
    * ユーザ削除を行います。
    */
   def remove(id: Long): Action[AnyContent] = Action { implicit request =>
-    UserRepository.removeUser(id)
-    Ok(successJson)
+    UserRepository.removeUser(id) match {
+      case Some(_) => Ok(successJson)
+      case None => BadRequest(createErrorJson(Json.obj("error" -> "ID not Found")))
+    }
   }
 }
 
@@ -88,4 +92,26 @@ object UserController {
    * 処理成功時に返すJSONオブジェクトを定義します。
    */
   val successJson: JsObject = Json.obj("result" -> "success")
+
+  /**
+   * エラー時の結果クラスを定義します。
+   *
+   * @param result 結果
+   * @param error  エラーオブジェクト
+   */
+  case class ErrorResult(result: String, error: JsObject)
+
+  /**
+   * ErrorResultをJSONに変換するためのWritesを定義します。
+   */
+  implicit val errorResultWrites: OWrites[ErrorResult] = Json.writes[ErrorResult]
+
+  /**
+   * エラー時のJSONオブジェクトを作成します。
+   *
+   * @param error エラー内容JsObject
+   * @return
+   */
+  def createErrorJson(error: JsObject): JsValue = Json.toJson(ErrorResult("failure", error))
+
 }
